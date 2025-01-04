@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'models/client.dart';
+import '../database/database_helper.dart';
+import '../models/client.dart';
+import '../models/observation.dart';
 
 class ClientRegistrationScreen extends StatefulWidget {
   final Client? client;
@@ -18,43 +20,53 @@ class _ClientRegistrationScreenState extends State<ClientRegistrationScreen> {
   late TextEditingController _addressController;
   late TextEditingController _dobController;
   late TextEditingController _preferencesController;
-  late List<String> _observationHistory = [];
+  late List<Observation> _observationHistory = [];
 
   late TextEditingController _observationController;
-
-  void _addObservation() {
-    if (_observationController.text.isNotEmpty) {
-      setState(() {
-        _observationHistory.add(
-            "${_observationController.text} - ${DateTime.now().toString()}");
-        //_observationController.clear();
-      });
-    }
-  }
 
   @override
   void initState() {
     super.initState();
-    _nameController =
-        TextEditingController(text: widget.client?.name ?? '');
-    _phoneController =
-        TextEditingController(text: widget.client?.phone ?? '');
-    _emailController =
-        TextEditingController(text: widget.client?.email ?? '');
+    _nameController = TextEditingController(text: widget.client?.name ?? '');
+    _phoneController = TextEditingController(text: widget.client?.phone ?? '');
+    _emailController = TextEditingController(text: widget.client?.email ?? '');
     _addressController =
         TextEditingController(text: widget.client?.address ?? '');
-    _dobController =
-        TextEditingController(text: widget.client?.dob ?? '');
+    _dobController = TextEditingController(text: widget.client?.dob ?? '');
     _preferencesController =
         TextEditingController(text: widget.client?.preferences ?? '');
-    _observationController = TextEditingController(
-      text: '',
-    );
-    _observationHistory = widget.client?.observationHistory??[];
+    _observationController = TextEditingController();
+
+    if (widget.client != null) {
+      _loadObservations(widget.client!.id!);
+    }
   }
+
+  void _loadObservations(int clientId) async {
+    final observations = await DatabaseHelper().getObservations(clientId);
+    setState(() {
+      _observationHistory = observations;
+    });
+  }
+
+  void _addObservation() {
+    if (_observationController.text.isNotEmpty) {
+      final newObservation = Observation(
+        clientId: widget.client?.id ?? 0, // Substitua "0" por um valor apropriado
+        content: _observationController.text,
+        timestamp: DateTime.now(),
+      );
+      setState(() {
+        _observationHistory.add(newObservation);
+      });
+      _observationController.clear();
+    }
+  }
+
 
   void _saveClient() {
     final newClient = Client(
+      id: widget.client?.id,
       name: _nameController.text,
       phone: _phoneController.text,
       email: _emailController.text,
@@ -64,6 +76,32 @@ class _ClientRegistrationScreenState extends State<ClientRegistrationScreen> {
       observationHistory: _observationHistory,
     );
     Navigator.pop(context, newClient);
+  }
+
+  void _confirmDeleteObservation(int index) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Confirmação'),
+        content: Text('Você tem certeza de que deseja excluir esta observação?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                _observationHistory.removeAt(index);
+              });
+              Navigator.pop(context);
+            },
+            child: Text('Excluir'),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -103,8 +141,8 @@ class _ClientRegistrationScreenState extends State<ClientRegistrationScreen> {
               ),
               TextField(
                 controller: _preferencesController,
-                decoration: InputDecoration(
-                    labelText: 'Preferências (ex: doces favoritos)'),
+                decoration:
+                InputDecoration(labelText: 'Preferências (ex: doces favoritos)'),
               ),
               SizedBox(height: 20),
               TextField(
@@ -117,23 +155,22 @@ class _ClientRegistrationScreenState extends State<ClientRegistrationScreen> {
                 child: Text('Adicionar Observação'),
               ),
               SizedBox(height: 10),
-            if (_observationHistory.isNotEmpty)
-          ..._observationHistory
-          .asMap() // Para obter o índice da observação
-          .entries
-              .map(
-            (entry) => ListTile(
-          title: Text(entry.value),
-          leading: Icon(Icons.comment),
-          trailing: IconButton(
-            icon: Icon(Icons.delete),
-            onPressed: () {
-                _confirmDeleteObservation(entry.key); // Remove a observação pelo índice
-            },
-          ),
-        ),
-           )
-              .toList(),
+              if (_observationHistory.isNotEmpty)
+                ..._observationHistory
+                    .asMap()
+                    .entries
+                    .map(
+                      (entry) => ListTile(
+                    title: Text(entry.value.content),
+                    subtitle: Text(entry.value.timestamp.toString()),
+                    leading: Icon(Icons.comment),
+                    trailing: IconButton(
+                      icon: Icon(Icons.delete),
+                      onPressed: () => _confirmDeleteObservation(entry.key),
+                    ),
+                  ),
+                )
+                    .toList(),
               ElevatedButton(
                 onPressed: _saveClient,
                 child: Text('Salvar Cliente'),
@@ -144,33 +181,4 @@ class _ClientRegistrationScreenState extends State<ClientRegistrationScreen> {
       ),
     );
   }
-
-    void _confirmDeleteObservation(int key) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text('Confirmação'),
-          content: Text('Você tem certeza de que deseja excluir esta observação?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context), // Fecha o diálogo sem excluir
-              child: Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  _observationHistory.removeAt(key); // Remove a observação
-                _saveClient();
-                });
-                Navigator.pop(context); // Fecha o diálogo
-              },
-              child: Text('Excluir'),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            ),
-          ],
-        ),
-      );
-    }
-
-
 }

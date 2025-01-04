@@ -1,12 +1,14 @@
+import 'observation.dart';
+
 class Client {
-  int? id; // ID será gerado automaticamente pelo banco de dados
+  int? id;
   String name;
   String phone;
   String email;
   String address;
-  String dob;
-  String preferences;
-  List<String> observationHistory;
+  String dob; // Data de nascimento
+  String preferences; // Preferências do cliente
+  List<Observation> observationHistory; // Histórico de observações
 
   Client({
     this.id,
@@ -16,9 +18,10 @@ class Client {
     required this.address,
     required this.dob,
     required this.preferences,
-    List<String>? observationHistory,
-  }) : observationHistory = observationHistory ?? [];
+    this.observationHistory = const [],
+  });
 
+  // Converte o objeto Client em um Map para salvar no banco de dados
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -28,10 +31,10 @@ class Client {
       'address': address,
       'dob': dob,
       'preferences': preferences,
-      'observationHistory': observationHistory.join(';'), // Salva como string separada por ";"
     };
   }
 
+  // Cria um objeto Client a partir de um Map do banco de dados
   factory Client.fromMap(Map<String, dynamic> map) {
     return Client(
       id: map['id'],
@@ -41,7 +44,6 @@ class Client {
       address: map['address'],
       dob: map['dob'],
       preferences: map['preferences'],
-      observationHistory: (map['observationHistory']??"").split(';'),
     );
   }
 }

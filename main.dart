@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'client_list_screen.dart';
+import 'screens/client_list_screen.dart';
 
 void main() {
   runApp(MyApp());
